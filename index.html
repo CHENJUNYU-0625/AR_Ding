@@ -1,81 +1,96 @@
 <!doctype html>
 <html>
-    <head>
-        <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
-        <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-        <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
-        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
-        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
-    </head>
+<head>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #start-ar {
+            position: absolute; 
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 30px;
+            background: #4285f4;
+            color: white;
+            border: none;
+            z-index: 100;
+        }
+    </style>
+</head>
 
-    <body style="margin: 0; overflow: hidden;">
-        <a-scene
-            vr-mode-ui="enabled: false;"
-            loading-screen="enabled: false;"
-            renderer="logarithmicDepthBuffer: true;"
-            arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
-            id="scene"
-            embedded
-            gesture-detector
+<body>
+    <button id="start-ar">啟動AR相機</button>
+
+    <a-scene
+        vr-mode-ui="enabled: false"
+        loading-screen="enabled: false"
+        arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: true"  <!-- 開啟偵錯 -->
+        renderer="logarithmicDepthBuffer: true"
+        embedded
+    >
+        <a-assets>
+            <a-asset-item id="model" src="assets/asset.glb"></a-asset-item>
+            <video id="video" src="assets/ding.mp4" preload="auto" muted></video>
+        </a-assets>
+
+        <a-marker
+            id="marker"
+            type="pattern"
+            preset="custom"
+            url="assets/marker.patt"
+            size="0.5"
+            emitevents="true"
+            raycaster="objects: .clickable"
         >
-            <a-assets timeout="10000">
-                <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
-                <!-- 預載影片 -->
-                <video id="ding-video" src="assets/ding.mp4" preload="auto" muted></video>
-            </a-assets>
+            <a-entity
+                gltf-model="#model"
+                scale="0.5 0.5 0.5"
+                animation-mixer="loop: repeat"
+                class="clickable"
+            ></a-entity>
 
-            <a-marker
-                id="animated-marker"
-                type="pattern"
-                preset="custom"
-                url="assets/marker.patt"
-                raycaster="objects: .clickable"
-                emitevents="true"
-                cursor="fuse: false; rayOrigin: mouse;"
-                id="markerA"
-            >
-                <a-entity
-                    id="bowser-model"
-                    scale="1.152453848971107 1.152453848971107 1.152453848971107"
-                    animation-mixer="loop: repeat"
-                    gltf-model="#animated-asset"
-                    class="clickable"
-                    gesture-handler
-                ></a-entity>
+            <a-video
+                src="#video"
+                position="0 0.5 0"
+                scale="1 1 1"
+                autoplay
+                muted
+            ></a-video>
+        </a-marker>
 
-                <a-video
-                    src="#ding-video"
-                    position="0 0.5 -0.5"
-                    scale="1 1 1"
-                    autoplay
-                    muted
-                ></a-video>
-            </a-marker>
+        <a-entity camera></a-entity>
+    </a-scene>
 
-            <a-entity camera></a-entity>
-        </a-scene>
+    <script>
+        // 啟動AR
+        document.getElementById('start-ar').addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                document.getElementById('start-ar').style.display = 'none';
+                document.querySelector('a-scene').enterVR();
+            } catch (error) {
+                alert('相機錯誤: ' + error.message);
+            }
+        });
 
-        <script>
-            // 標記被偵測時播放影片
-            document.querySelector('#animated-marker').addEventListener('markerFound', () => {
-                const aVideo = document.querySelector('a-video');
-                if (aVideo) {
-                    const videoElement = aVideo.components.material.material.map.image;
-                    videoElement.play();
-                    videoElement.muted = false; // 恢復聲音
-                }
-            });
+        // 標記偵測
+        document.querySelector('#marker').addEventListener('markerFound', () => {
+            console.log('標記已辨識');
+            const video = document.querySelector('a-video');
+            if (video) {
+                video.components.material.material.map.image.play();
+            }
+        });
 
-            // 標記消失時暫停影片並靜音
-            document.querySelector('#animated-marker').addEventListener('markerLost', () => {
-                const aVideo = document.querySelector('a-video');
-                if (aVideo) {
-                    const videoElement = aVideo.components.material.material.map.image;
-                    videoElement.pause();
-                    videoElement.currentTime = 0; // 重置播放進度
-                    videoElement.muted = true; // 強制靜音
-                }
-            });
-        </script>
-    </body>
+        document.querySelector('#marker').addEventListener('markerLost', () => {
+            console.log('標記消失');
+            const video = document.querySelector('a-video');
+            if (video) {
+                video.components.material.material.map.image.pause();
+            }
+        });
+    </script>
+</body>
 </html>
