@@ -1,81 +1,150 @@
 <!doctype html>
 <html>
-    <head>
-        <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
-        <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-        <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
-        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
-        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
-    </head>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>AR 標記辨識</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <style>
+        #startButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 30px;
+            font-size: 18px;
+            z-index: 1000;
+            background: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #loading {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
 
-    <body style="margin: 0; overflow: hidden;">
-        <a-scene
-            vr-mode-ui="enabled: false;"
-            loading-screen="enabled: false;"
-            renderer="logarithmicDepthBuffer: true;"
-            arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
-            id="scene"
-            embedded
-            gesture-detector
+<body>
+    <button id="startButton">啟動 AR 相機</button>
+    <div id="loading">載入中，請稍候...</div>
+
+    <a-scene 
+        vr-mode-ui="enabled: false"
+        loading-screen="enabled: false"
+        renderer="logarithmicDepthBuffer: true; antialias: true;"
+        arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false;"
+        embedded
+        gesture-detector
+    >
+        <a-assets timeout="30000">
+            <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
+            <video id="ding-video" src="assets/ding.mp4" preload="auto" muted loop></video>
+        </a-assets>
+
+        <a-marker
+            id="animated-marker"
+            type="pattern"
+            preset="custom"
+            url="assets/marker.patt"
+            raycaster="objects: .clickable"
+            emitevents="true"
+            cursor="fuse: false; rayOrigin: mouse;"
         >
-            <a-assets timeout="10000">
-                <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
-                <!-- 預載影片 -->
-                <video id="ding-video" src="assets/ding.mp4" preload="auto" muted></video>
-            </a-assets>
+            <a-entity
+                id="bowser-model"
+                position="0 0 0"
+                scale="1 1 1"
+                animation-mixer="loop: repeat"
+                gltf-model="#animated-asset"
+                class="clickable"
+                gesture-handler
+            ></a-entity>
 
-            <a-marker
-                id="animated-marker"
-                type="pattern"
-                preset="custom"
-                url="assets/marker.patt"
-                raycaster="objects: .clickable"
-                emitevents="true"
-                cursor="fuse: false; rayOrigin: mouse;"
-                id="markerA"
-            >
-                <a-entity
-                    id="bowser-model"
-                    scale="1.152453848971107 1.152453848971107 1.152453848971107"
-                    animation-mixer="loop: repeat"
-                    gltf-model="#animated-asset"
-                    class="clickable"
-                    gesture-handler
-                ></a-entity>
+            <a-video
+                src="#ding-video"
+                position="0 0.5 -0.5"
+                scale="1 1 1"
+                autoplay
+                muted
+            ></a-video>
+        </a-marker>
 
-                <a-video
-                    src="#ding-video"
-                    position="0 0.5 -0.5"
-                    scale="1 1 1"
-                    autoplay
-                    muted
-                ></a-video>
-            </a-marker>
+        <a-entity camera></a-entity>
+    </a-scene>
 
-            <a-entity camera></a-entity>
-        </a-scene>
-
-        <script>
-            // 標記被偵測時播放影片
-            document.querySelector('#animated-marker').addEventListener('markerFound', () => {
-                const aVideo = document.querySelector('a-video');
-                if (aVideo) {
-                    const videoElement = aVideo.components.material.material.map.image;
-                    videoElement.play();
-                    videoElement.muted = false; // 恢復聲音
+    <script>
+        // 啟動按鈕處理
+        document.getElementById('startButton').addEventListener('click', async () => {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('startButton').style.display = 'none';
+                
+                // 檢查相機權限
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: {
+                        facingMode: 'environment',  // 使用後置鏡頭
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                // 手動啟動 AR 場景
+                const scene = document.querySelector('a-scene');
+                if (scene.is('vr-mode')) {
+                    scene.exitVR();
                 }
-            });
+                scene.enterVR();
+                
+                // 確保資源載入完成
+                scene.addEventListener('loaded', () => {
+                    document.getElementById('loading').style.display = 'none';
+                });
+                
+            } catch (error) {
+                alert('無法存取相機: ' + error.message);
+                console.error('相機錯誤:', error);
+                document.getElementById('startButton').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
 
-            // 標記消失時暫停影片並靜音
-            document.querySelector('#animated-marker').addEventListener('markerLost', () => {
-                const aVideo = document.querySelector('a-video');
-                if (aVideo) {
-                    const videoElement = aVideo.components.material.material.map.image;
-                    videoElement.pause();
-                    videoElement.currentTime = 0; // 重置播放進度
-                    videoElement.muted = true; // 強制靜音
-                }
-            });
-        </script>
-    </body>
+        // 標記偵測事件
+        document.querySelector('#animated-marker').addEventListener('markerFound', (e) => {
+            const aVideo = document.querySelector('a-video');
+            if (aVideo) {
+                const videoEl = aVideo.components.material.material.map.image;
+                videoEl.play().catch(e => console.log('影片播放錯誤:', e));
+                videoEl.muted = false;
+                
+                // 重置模型位置
+                const marker = e.target;
+                marker.object3D.position.set(0, 0, 0);
+                marker.object3D.rotation.set(0, 0, 0);
+            }
+        });
+
+        document.querySelector('#animated-marker').addEventListener('markerLost', () => {
+            const aVideo = document.querySelector('a-video');
+            if (aVideo) {
+                const videoEl = aVideo.components.material.material.map.image;
+                videoEl.pause();
+                videoEl.currentTime = 0;
+                videoEl.muted = true;
+            }
+        });
+
+        // 錯誤處理
+        window.addEventListener('arjs-video-loaded', () => {
+            console.log('AR.js 影片流已載入');
+        });
+    </script>
+</body>
 </html>
