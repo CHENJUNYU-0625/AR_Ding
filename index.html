@@ -57,8 +57,19 @@
           width="1.2"
           height="0.9"
           material="src: assets/cover.jpg"
+          rotation="0 0 0"
           class="clickable"
-        ></a-plane>
+        >
+          <!-- 翻頁動畫 -->
+          <a-animation id="flipAnim"
+            attribute="rotation"
+            dur="500"
+            fill="forwards"
+            begin="flip"
+            from="0 0 0"
+            to="0 180 0"
+          ></a-animation>
+        </a-plane>
 
         <!-- 翻頁按鈕 -->
         <a-image
@@ -105,7 +116,7 @@
         }
       });
 
-      // 電子書邏輯
+      // 電子書頁面邏輯
       const pages = [
         'assets/cover.jpg',
         'assets/page2.jpg',
@@ -117,6 +128,7 @@
         const page = document.querySelector('#book-page');
         if (page) {
           page.setAttribute('material', 'src', pages[currentPage]);
+          page.emit('flip');  // 播放翻頁動畫
         }
       }
 
