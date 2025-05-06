@@ -16,14 +16,20 @@
       cursor="rayOrigin: mouse"
       raycaster="objects: .clickable"
     >
-      <!-- 資源 -->
-      <a-assets timeout="10000">
+      <!-- 預載資源 -->
+      <a-assets timeout="15000">
         <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
         <video id="ding-video" src="assets/ding.mp4" preload="auto" muted></video>
         <audio id="page-flip-sound" src="assets/page-flip.mp3" preload="auto"></audio>
+
+        <!-- 圖片預載 -->
+        <img id="cover-img" src="assets/cover.jpg" />
+        <img id="page2-img" src="assets/page2.jpg" />
+        <img id="page3-img" src="assets/page3.jpg" />
+        <img id="left-arrow" src="assets/left-arrow.png" />
+        <img id="right-arrow" src="assets/right-arrow.png" />
       </a-assets>
 
-      <!-- Marker -->
       <a-marker
         id="animated-marker"
         type="pattern"
@@ -51,22 +57,22 @@
           muted
         ></a-video>
 
-        <!-- 電子書頁面（位置向上移動） -->
+        <!-- 電子書頁面 -->
         <a-plane
           id="book-page"
           position="0 1.5 -1"
           width="1.2"
           height="0.9"
-          material="src: assets/cover.jpg"
+          material="src: #cover-img"
           rotation="0 0 0"
           class="clickable"
           animation__flip="property: rotation; dur: 500; startEvents: flip; from: 0 0 0; to: 0 180 0"
         ></a-plane>
 
-        <!-- 翻頁按鈕 -->
+        <!-- 按鈕 -->
         <a-image
           id="prev-button"
-          src="assets/left-arrow.png"
+          src="#left-arrow"
           position="-0.8 1.5 -0.9"
           width="0.2"
           height="0.2"
@@ -76,7 +82,7 @@
 
         <a-image
           id="next-button"
-          src="assets/right-arrow.png"
+          src="#right-arrow"
           position="0.8 1.5 -0.9"
           width="0.2"
           height="0.2"
@@ -85,35 +91,58 @@
         ></a-image>
       </a-marker>
 
-      <!-- 相機 -->
       <a-entity camera></a-entity>
     </a-scene>
 
     <script>
-      // 播放影片（標記出現）
-      document.querySelector('#animated-marker').addEventListener('markerFound', () => {
+      window.addEventListener('DOMContentLoaded', () => {
+        // 資源
         const videoEl = document.querySelector('#ding-video');
-        if (videoEl) {
-          videoEl.play();
-          videoEl.muted = false;
-        }
-      });
+        const pageSound = document.querySelector('#page-flip-sound');
 
-      // 停止影片（標記消失）
-      document.querySelector('#animated-marker').addEventListener('markerLost', () => {
-        const videoEl = document.querySelector('#ding-video');
-        if (videoEl) {
-          videoEl.pause();
-          videoEl.currentTime = 0;
-          videoEl.muted = true;
-        }
-      });
+        // 頁面列表（使用 <img> 預載 ID）
+        const pages = ['#cover-img', '#page2-img', '#page3-img'];
+        let currentPage = 0;
 
-      // 電子書頁面邏輯
-      const pages = [
-        'assets/cover.jpg',
-        'assets/page2.jpg',
-        'assets/page3.jpg'
-      ];
-      let currentPage = 0;
-      const pageSound = document.
+        function updateBookPage() {
+          const page = document.querySelector('#book-page');
+          if (page) {
+            page.setAttribute('material', 'src', pages[currentPage]);
+            page.emit('flip');
+          }
+          if (pageSound) {
+            pageSound.currentTime = 0;
+            pageSound.play();
+          }
+        }
+
+        // 影片控制（標記出現）
+        document.querySelector('#animated-marker').addEventListener('markerFound', () => {
+          if (videoEl) {
+            videoEl.play();
+            videoEl.muted = false;
+          }
+        });
+
+        document.querySelector('#animated-marker').addEventListener('markerLost', () => {
+          if (videoEl) {
+            videoEl.pause();
+            videoEl.currentTime = 0;
+            videoEl.muted = true;
+          }
+        });
+
+        // 翻頁按鈕事件
+        document.querySelector('#prev-button').addEventListener('click', () => {
+          currentPage = (currentPage - 1 + pages.length) % pages.length;
+          updateBookPage();
+        });
+
+        document.querySelector('#next-button').addEventListener('click', () => {
+          currentPage = (currentPage + 1) % pages.length;
+          updateBookPage();
+        });
+      });
+    </script>
+  </body>
+</html>
