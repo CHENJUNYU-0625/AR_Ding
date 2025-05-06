@@ -1,48 +1,47 @@
 <!doctype html>
 <html>
   <head>
+    <meta charset="utf-8">
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
   </head>
 
   <body style="margin: 0; overflow: hidden;">
     <a-scene
-      vr-mode-ui="enabled: false;"
-      loading-screen="enabled: false;"
-      renderer="logarithmicDepthBuffer: true;"
-      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+      vr-mode-ui="enabled: false"
+      loading-screen="enabled: false"
+      renderer="logarithmicDepthBuffer: true"
       embedded
-      gesture-detector
+      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
     >
+      <!-- 資源 -->
       <a-assets timeout="10000">
         <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
         <video id="ding-video" src="assets/ding.mp4" preload="auto" muted></video>
       </a-assets>
 
+      <!-- Marker -->
       <a-marker
         id="animated-marker"
         type="pattern"
         preset="custom"
         url="assets/marker.patt"
-        raycaster="objects: .clickable"
         emitevents="true"
-        cursor="fuse: false; rayOrigin: mouse;"
+        raycaster="objects: .clickable"
+        cursor="rayOrigin: mouse"
       >
-        <!-- 3D 模型 -->
+        <!-- 模型 -->
         <a-entity
           id="bowser-model"
           scale="1 1 1"
           animation-mixer="loop: repeat"
           gltf-model="#animated-asset"
           class="clickable"
-          gesture-handler
         ></a-entity>
 
         <!-- 影片 -->
         <a-video
+          id="video-entity"
           src="#ding-video"
           position="0 0.5 -0.5"
           scale="1 1 1"
@@ -59,17 +58,8 @@
           material="src: assets/cover.jpg"
           rotation="0 0 0"
           class="clickable"
-        >
-          <!-- 翻頁動畫 -->
-          <a-animation id="flipAnim"
-            attribute="rotation"
-            dur="500"
-            fill="forwards"
-            begin="flip"
-            from="0 0 0"
-            to="0 180 0"
-          ></a-animation>
-        </a-plane>
+          animation__flip="property: rotation; dur: 500; startEvents: flip; from: 0 0 0; to: 0 180 0"
+        ></a-plane>
 
         <!-- 翻頁按鈕 -->
         <a-image
@@ -91,32 +81,31 @@
         ></a-image>
       </a-marker>
 
-      <a-entity camera></a-entity>
+      <!-- 相機與點擊偵測 -->
+      <a-entity camera cursor="rayOrigin: mouse" raycaster="objects: .clickable"></a-entity>
     </a-scene>
 
     <script>
-      // 播放影片（當標記出現）
+      // 播放影片（標記出現）
       document.querySelector('#animated-marker').addEventListener('markerFound', () => {
-        const aVideo = document.querySelector('a-video');
-        if (aVideo) {
-          const videoElement = aVideo.components.material.material.map.image;
-          videoElement.play();
-          videoElement.muted = false;
+        const videoEl = document.querySelector('#ding-video');
+        if (videoEl) {
+          videoEl.play();
+          videoEl.muted = false;
         }
       });
 
-      // 停止影片（當標記消失）
+      // 停止影片（標記消失）
       document.querySelector('#animated-marker').addEventListener('markerLost', () => {
-        const aVideo = document.querySelector('a-video');
-        if (aVideo) {
-          const videoElement = aVideo.components.material.material.map.image;
-          videoElement.pause();
-          videoElement.currentTime = 0;
-          videoElement.muted = true;
+        const videoEl = document.querySelector('#ding-video');
+        if (videoEl) {
+          videoEl.pause();
+          videoEl.currentTime = 0;
+          videoEl.muted = true;
         }
       });
 
-      // 電子書頁面邏輯
+      // 電子書邏輯
       const pages = [
         'assets/cover.jpg',
         'assets/page2.jpg',
@@ -128,10 +117,11 @@
         const page = document.querySelector('#book-page');
         if (page) {
           page.setAttribute('material', 'src', pages[currentPage]);
-          page.emit('flip');  // 播放翻頁動畫
+          page.emit('flip');
         }
       }
 
+      // 點擊事件
       document.querySelector('#prev-button').addEventListener('click', () => {
         currentPage = (currentPage - 1 + pages.length) % pages.length;
         updateBookPage();
@@ -144,3 +134,4 @@
     </script>
   </body>
 </html>
+
