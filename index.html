@@ -4,9 +4,25 @@
     <meta charset="utf-8">
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
+    <style>
+      #loader {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 20px;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 1em 2em;
+        border-radius: 10px;
+        z-index: 999;
+      }
+    </style>
   </head>
 
   <body style="margin: 0; overflow: hidden;">
+    <div id="loader">載入中，請稍候...</div>
+
     <a-scene
       embedded
       vr-mode-ui="enabled: false"
@@ -16,16 +32,10 @@
       cursor="rayOrigin: mouse"
       raycaster="objects: .clickable"
     >
-      <!-- 預載資源 -->
-      <a-assets timeout="15000">
+      <!-- 預載小資源 -->
+      <a-assets timeout="10000">
         <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
-        <video id="ding-video" src="assets/ding.mp4" preload="auto" muted></video>
-        <audio id="page-flip-sound" src="assets/page-flip.mp3" preload="auto"></audio>
-
-        <!-- 圖片預載 -->
         <img id="cover-img" src="assets/cover.jpg" />
-        <img id="page2-img" src="assets/page2.jpg" />
-        <img id="page3-img" src="assets/page3.jpg" />
         <img id="left-arrow" src="assets/left-arrow.png" />
         <img id="right-arrow" src="assets/right-arrow.png" />
       </a-assets>
@@ -36,7 +46,6 @@
         preset="custom"
         url="assets/marker.patt"
         emitevents="true"
-        raycaster="objects: .clickable"
       >
         <!-- 模型 -->
         <a-entity
@@ -47,10 +56,9 @@
           class="clickable"
         ></a-entity>
 
-        <!-- 影片 -->
+        <!-- 影片（延遲加入 src） -->
         <a-video
           id="video-entity"
-          src="#ding-video"
           position="0 0.5 -0.5"
           scale="1 1 1"
           autoplay
@@ -76,7 +84,6 @@
           position="-0.8 1.5 -0.9"
           width="0.2"
           height="0.2"
-          material="transparent: true"
           class="clickable"
         ></a-image>
 
@@ -86,7 +93,6 @@
           position="0.8 1.5 -0.9"
           width="0.2"
           height="0.2"
-          material="transparent: true"
           class="clickable"
         ></a-image>
       </a-marker>
@@ -95,53 +101,73 @@
     </a-scene>
 
     <script>
-      window.addEventListener('DOMContentLoaded', () => {
-        // 資源
-        const videoEl = document.querySelector('#ding-video');
-        const pageSound = document.querySelector('#page-flip-sound');
+      window.addEventListener('load', () => {
+        const loader = document.getElementById('loader');
+        if (loader) loader.style.display = 'none';
 
-        // 頁面列表（使用 <img> 預載 ID）
-        const pages = ['#cover-img', '#page2-img', '#page3-img'];
+        // 延遲載入圖片（不在 <a-assets> 預載）
+        const pageUrls = ['assets/cover.jpg', 'assets/page2.jpg', 'assets/page3.jpg'];
+        const imageCache = [];
+
+        // 頁面預載進 JS 記憶體（非 DOM）
+        pageUrls.forEach((url, index) => {
+          const img = new Image();
+          img.src = url;
+          imageCache[index] = img;
+        });
+
         let currentPage = 0;
 
         function updateBookPage() {
           const page = document.querySelector('#book-page');
           if (page) {
-            page.setAttribute('material', 'src', pages[currentPage]);
+            page.setAttribute('material', 'src', imageCache[currentPage].src);
             page.emit('flip');
-          }
-          if (pageSound) {
-            pageSound.currentTime = 0;
-            pageSound.play();
+            if (flipSound) {
+              flipSound.currentTime = 0;
+              flipSound.play();
+            }
           }
         }
 
-        // 影片控制（標記出現）
-        document.querySelector('#animated-marker').addEventListener('markerFound', () => {
-          if (videoEl) {
-            videoEl.play();
-            videoEl.muted = false;
-          }
-        });
-
-        document.querySelector('#animated-marker').addEventListener('markerLost', () => {
-          if (videoEl) {
-            videoEl.pause();
-            videoEl.currentTime = 0;
-            videoEl.muted = true;
-          }
-        });
-
-        // 翻頁按鈕事件
+        // 按鈕翻頁
         document.querySelector('#prev-button').addEventListener('click', () => {
-          currentPage = (currentPage - 1 + pages.length) % pages.length;
+          currentPage = (currentPage - 1 + imageCache.length) % imageCache.length;
           updateBookPage();
         });
 
         document.querySelector('#next-button').addEventListener('click', () => {
-          currentPage = (currentPage + 1) % pages.length;
+          currentPage = (currentPage + 1) % imageCache.length;
           updateBookPage();
         });
+
+        // 影片延遲載入播放控制
+        const marker = document.querySelector('#animated-marker');
+        const videoEl = document.querySelector('#video-entity');
+
+        marker.addEventListener('markerFound', () => {
+          if (videoEl && !videoEl.getAttribute('src')) {
+            videoEl.setAttribute('src', 'assets/ding.mp4');
+          }
+          const videoDom = videoEl.components.material.material.map.image;
+          if (videoDom) {
+            videoDom.play();
+            videoDom.muted = false;
+          }
+        });
+
+        marker.addEventListener('markerLost', () => {
+          const videoDom = videoEl.components.material.material.map.image;
+          if (videoDom) {
+            videoDom.pause();
+            videoDom.currentTime = 0;
+            videoDom.muted = true;
+          }
+        });
+
+        // 翻頁音效延遲載入
+        const flipSound = new Audio('assets/page-flip.mp3');
+        flipSound.load();
       });
     </script>
   </body>
