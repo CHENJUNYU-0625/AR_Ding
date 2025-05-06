@@ -18,6 +18,7 @@
       <a-assets timeout="10000">
         <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
         <video id="ding-video" src="assets/ding.mp4" preload="auto" muted></video>
+        <audio id="page-flip-sound" src="assets/page-flip.mp3" preload="auto"></audio>
       </a-assets>
 
       <!-- Marker -->
@@ -49,10 +50,10 @@
           muted
         ></a-video>
 
-        <!-- 電子書頁面 -->
+        <!-- 電子書頁面（位置向上移動） -->
         <a-plane
           id="book-page"
-          position="0 1 -1"
+          position="0 1.5 -1"
           width="1.2"
           height="0.9"
           material="src: assets/cover.jpg"
@@ -61,11 +62,11 @@
           animation__flip="property: rotation; dur: 500; startEvents: flip; from: 0 0 0; to: 0 180 0"
         ></a-plane>
 
-        <!-- 翻頁按鈕 -->
+        <!-- 翻頁按鈕（位置一併上移） -->
         <a-image
           id="prev-button"
           src="assets/left-arrow.png"
-          position="-0.8 0.5 -1"
+          position="-0.8 1.5 -1"
           width="0.2"
           height="0.2"
           class="clickable"
@@ -74,7 +75,7 @@
         <a-image
           id="next-button"
           src="assets/right-arrow.png"
-          position="0.8 0.5 -1"
+          position="0.8 1.5 -1"
           width="0.2"
           height="0.2"
           class="clickable"
@@ -105,7 +106,7 @@
         }
       });
 
-      // 電子書邏輯
+      // 電子書頁面邏輯
       const pages = [
         'assets/cover.jpg',
         'assets/page2.jpg',
@@ -113,15 +114,21 @@
       ];
       let currentPage = 0;
 
+      const pageSound = document.querySelector('#page-flip-sound');
+
       function updateBookPage() {
         const page = document.querySelector('#book-page');
         if (page) {
           page.setAttribute('material', 'src', pages[currentPage]);
           page.emit('flip');
         }
+        if (pageSound) {
+          pageSound.currentTime = 0;
+          pageSound.play();
+        }
       }
 
-      // 點擊事件
+      // 按鈕點擊
       document.querySelector('#prev-button').addEventListener('click', () => {
         currentPage = (currentPage - 1 + pages.length) % pages.length;
         updateBookPage();
@@ -134,4 +141,5 @@
     </script>
   </body>
 </html>
+
 
