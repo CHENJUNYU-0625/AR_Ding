@@ -112,12 +112,12 @@
         'assets/page2.jpg',
         'assets/page3.jpg'
       ];
-      let currentPage = 0;
+      let currentPage = 1;
 
       const pageSound = document.querySelector('#page-flip-sound');
 
       function updateBookPage() {
-        const page = document.querySelector('#book-page');
+        const page = document.querySelector("#book-page");
         if (page) {
           page.setAttribute('material', 'src', pages[currentPage]);
           page.emit('flip');
