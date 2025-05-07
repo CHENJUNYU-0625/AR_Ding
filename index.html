@@ -2,71 +2,93 @@
 <html>
   <head>
     <meta charset="utf-8">
+    <title>AR 電子書</title>
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
+    <style>
+      #loader {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 18px;
+        background: rgba(0,0,0,0.75);
+        color: white;
+        padding: 1em 2em;
+        border-radius: 10px;
+        z-index: 999;
+      }
+    </style>
   </head>
 
   <body style="margin: 0; overflow: hidden;">
+    <div id="loader">載入中，請稍候...</div>
+
     <a-scene
+      embedded
       vr-mode-ui="enabled: false"
       loading-screen="enabled: false"
       renderer="logarithmicDepthBuffer: true"
-      embedded
       arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+      cursor="rayOrigin: mouse"
+      raycaster="objects: .clickable"
+      gesture-detector
     >
-      <!-- 資源 -->
       <a-assets timeout="10000">
         <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
-        <video id="ding-video" src="assets/ding.mp4" preload="auto" muted></video>
-        <audio id="page-flip-sound" src="assets/page-flip.mp3" preload="auto"></audio>
+        <img id="cover-img" src="assets/cover.jpg" />
+        <img id="left-arrow" src="assets/left-arrow.png" />
+        <img id="right-arrow" src="assets/right-arrow.png" />
+        <audio id="flip-sound" src="assets/page-flip.mp3" preload="auto"></audio>
       </a-assets>
 
-      <!-- Marker -->
       <a-marker
         id="animated-marker"
         type="pattern"
         preset="custom"
         url="assets/marker.patt"
         emitevents="true"
-        raycaster="objects: .clickable"
-        cursor="rayOrigin: mouse"
       >
         <!-- 模型 -->
         <a-entity
           id="bowser-model"
-          scale="1 1 1"
-          animation-mixer="loop: repeat"
           gltf-model="#animated-asset"
+          animation-mixer="loop: repeat"
+          position="0 0 0"
+          scale="1 1 1"
           class="clickable"
+          gesture-handler
         ></a-entity>
 
         <!-- 影片 -->
         <a-video
           id="video-entity"
-          src="#ding-video"
           position="0 0.5 -0.5"
           scale="1 1 1"
           autoplay
           muted
         ></a-video>
 
-        <!-- 電子書頁面（位置向上移動） -->
+        <!-- 書頁 -->
         <a-plane
           id="book-page"
           position="0 1.5 -1"
           width="1.2"
           height="0.9"
-          material="src: assets/cover.jpg"
+          material="src: #cover-img"
           rotation="0 0 0"
           class="clickable"
+          gesture-handler
           animation__flip="property: rotation; dur: 500; startEvents: flip; from: 0 0 0; to: 0 180 0"
         ></a-plane>
 
-        <!-- 翻頁按鈕（位置一併上移） -->
+        <!-- 翻頁按鈕 -->
         <a-image
           id="prev-button"
-          src="assets/left-arrow.png"
-          position="-0.8 1.5 -1"
+          src="#left-arrow"
+          position="-0.9 1.5 -0.9"
           width="0.2"
           height="0.2"
           class="clickable"
@@ -74,69 +96,100 @@
 
         <a-image
           id="next-button"
-          src="assets/right-arrow.png"
-          position="0.8 1.5 -1"
+          src="#right-arrow"
+          position="0.9 1.5 -0.9"
           width="0.2"
           height="0.2"
           class="clickable"
         ></a-image>
       </a-marker>
 
-      <!-- 相機與點擊偵測 -->
-      <a-entity camera cursor="rayOrigin: mouse" raycaster="objects: .clickable"></a-entity>
+      <a-entity camera></a-entity>
     </a-scene>
 
     <script>
-      // 播放影片（標記出現）
-      document.querySelector('#animated-marker').addEventListener('markerFound', () => {
-        const videoEl = document.querySelector('#ding-video');
-        if (videoEl) {
-          videoEl.play();
-          videoEl.muted = false;
+      window.addEventListener('load', () => {
+        const loader = document.getElementById('loader');
+        if (loader) loader.style.display = 'none';
+
+        const marker = document.querySelector('#animated-marker');
+        const videoEl = document.querySelector('#video-entity');
+        const flipSound = document.querySelector('#flip-sound');
+
+        // 頁面圖片預載
+        const pageUrls = [
+          'assets/cover.jpg',
+          'assets/page2.jpg',
+          'assets/page3.jpg'
+        ];
+        const imageCache = pageUrls.map(url => {
+          const img = new Image();
+          img.src = url;
+          return img;
+        });
+
+        let currentPage = 0;
+
+        function updateBookPage() {
+          const page = document.querySelector('#book-page');
+          if (page) {
+            page.setAttribute('material', 'src', imageCache[currentPage].src);
+            page.emit('flip');
+            if (flipSound) {
+              flipSound.currentTime = 0;
+              flipSound.play();
+            }
+          }
         }
-      });
 
-      // 停止影片（標記消失）
-      document.querySelector('#animated-marker').addEventListener('markerLost', () => {
-        const videoEl = document.querySelector('#ding-video');
-        if (videoEl) {
-          videoEl.pause();
-          videoEl.currentTime = 0;
-          videoEl.muted = true;
-        }
-      });
+        // 翻頁按鈕
+        document.querySelector('#prev-button').addEventListener('click', () => {
+          currentPage = (currentPage - 1 + imageCache.length) % imageCache.length;
+          updateBookPage();
+        });
 
-      // 電子書頁面邏輯
-      const pages = [
-        'assets/cover.jpg',
-        'assets/page2.jpg',
-        'assets/page3.jpg'
-      ];
-      let currentPage =0;
+        document.querySelector('#next-button').addEventListener('click', () => {
+          currentPage = (currentPage + 1) % imageCache.length;
+          updateBookPage();
+        });
 
-      const pageSound = document.querySelector('#page-flip-sound');
+        // 播放影片
+        marker.addEventListener('markerFound', () => {
+          if (!videoEl.getAttribute('src')) {
+            videoEl.setAttribute('src', 'assets/ding.mp4');
+          }
+          const videoDom = videoEl.components.material.material.map.image;
+          if (videoDom) {
+            videoDom.play();
+            videoDom.muted = false;
+          }
+        });
 
-      function updateBookPage() {
-        const page = document.querySelector("#book-page");
-        if (page) {
-          page.setAttribute('material', 'src', pages[currentPage]);
-          page.emit('flip');
-        }
-        if (pageSound) {
-          pageSound.currentTime = 0;
-          pageSound.play();
-        }
-      }
+        marker.addEventListener('markerLost', () => {
+          const videoDom = videoEl.components.material.material.map.image;
+          if (videoDom) {
+            videoDom.pause();
+            videoDom.currentTime = 0;
+            videoDom.muted = true;
+          }
+        });
 
-      // 按鈕點擊
-      document.querySelector('#prev-button').addEventListener('click', () => {
-        currentPage = (currentPage - 1 + pages.length) % pages.length;
-        updateBookPage();
-      });
-
-      document.querySelector('#next-button').addEventListener('click', () => {
-        currentPage = (currentPage + 1) % pages.length;
-        updateBookPage();
+        // 加入雙指重置模型與書頁
+        const gestureElements = ['#bowser-model', '#book-page'];
+        gestureElements.forEach(selector => {
+          const el = document.querySelector(selector);
+          if (el) {
+            let lastTap = 0;
+            el.addEventListener('touchstart', (e) => {
+              const now = Date.now();
+              if (e.touches.length === 2 && now - lastTap < 500) {
+                el.setAttribute('scale', '1 1 1');
+                el.setAttribute('rotation', '0 0 0');
+              }
+              lastTap = now;
+            });
+          }
+        });
       });
     </script>
   </body>
