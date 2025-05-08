@@ -1,180 +1,82 @@
+
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>AR 電子書</title>
-    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
-    <style>
-      #loader {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 18px;
-        background: rgba(0,0,0,0.75);
-        color: white;
-        padding: 1em 2em;
-        border-radius: 10px;
-        z-index: 999;
-      }
-    </style>
-  </head>
+    <head>
+        <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+        <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+        <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
+        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
+        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
+    </head>
 
-  <body style="margin: 0; overflow: hidden;">
-    <div id="loader">載入中，請稍候...</div>
+    <body style="margin: 0; overflow: hidden;">
+        <a-scene
+            vr-mode-ui="enabled: false;"
+            loading-screen="enabled: false;"
+            renderer="logarithmicDepthBuffer: true;"
+            arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+            id="scene"
+            embedded
+            gesture-detector
+        >
+            <a-assets timeout="10000">
+                <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
+                <!-- 預載影片 -->
+                <video id="ding-video" src="assets/ding.mp4" preload="auto" muted></video>
+            </a-assets>
 
-    <a-scene
-      embedded
-      vr-mode-ui="enabled: false"
-      loading-screen="enabled: false"
-      renderer="logarithmicDepthBuffer: true"
-      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
-      cursor="rayOrigin: mouse"
-      raycaster="objects: .clickable"
-      gesture-detector
-    >
-      <a-assets timeout="10000">
-        <a-asset-item id="animated-asset" src="assets/asset.glb"></a-asset-item>
-        <img id="cover-img" src="assets/cover.jpg" />
-        <img id="left-arrow" src="assets/left-arrow.png" />
-        <img id="right-arrow" src="assets/right-arrow.png" />
-        <audio id="flip-sound" src="assets/page-flip.mp3" preload="auto"></audio>
-      </a-assets>
+            <a-marker
+                id="animated-marker"
+                type="pattern"
+                preset="custom"
+                url="assets/marker.patt"
+                raycaster="objects: .clickable"
+                emitevents="true"
+                cursor="fuse: false; rayOrigin: mouse;"
+                id="markerA"
+            >
+                <a-entity
+                    id="bowser-model"
+                    scale="1.152453848971107 1.152453848971107 1.152453848971107"
+                    animation-mixer="loop: repeat"
+                    gltf-model="#animated-asset"
+                    class="clickable"
+                    gesture-handler
+                ></a-entity>
 
-      <a-marker
-        id="animated-marker"
-        type="pattern"
-        preset="custom"
-        url="assets/marker.patt"
-        emitevents="true"
-      >
-        <!-- 模型 -->
-        <a-entity
-          id="bowser-model"
-          gltf-model="#animated-asset"
-          animation-mixer="loop: repeat"
-          position="0 0 0"
-          scale="1 1 1"
-          gesture-handler
-          class="clickable"
-        ></a-entity>
+                <a-video
+                    src="#ding-video"
+                    position="0 0.5 -0.5"
+                    scale="1 1 1"
+                    autoplay
+                    muted
+                ></a-video>
+            </a-marker>
 
-        <!-- 影片 -->
-        <a-video
-          id="video-entity"
-          position="0 0.5 -0.5"
-          scale="1 1 1"
-          autoplay
-          muted
-        ></a-video>
+            <a-entity camera></a-entity>
+        </a-scene>
 
-        <!-- 書頁 -->
-        <a-plane
-          id="book-page"
-          position="0 1.5 -1"
-          width="1.2"
-          height="0.9"
-          material="src: #cover-img"
-          rotation="0 0 0"
-          class="clickable"
-          gesture-handler
-          animation__flip="property: rotation; dur: 500; startEvents: flip; from: 0 0 0; to: 0 180 0"
-        ></a-plane>
+        <script>
+            // 標記被偵測時播放影片
+            document.querySelector('#animated-marker').addEventListener('markerFound', () => {
+                const aVideo = document.querySelector('a-video');
+                if (aVideo) {
+                    const videoElement = aVideo.components.material.material.map.image;
+                    videoElement.play();
+                    videoElement.muted = false; // 恢復聲音
+                }
+            });
 
-        <!-- 翻頁按鈕 -->
-        <a-image
-          id="prev-button"
-          src="#left-arrow"
-          position="-0.9 1.5 -0.9"
-          width="0.2"
-          height="0.2"
-          class="clickable"
-        ></a-image>
-
-        <a-image
-          id="next-button"
-          src="#right-arrow"
-          position="0.9 1.5 -0.9"
-          width="0.2"
-          height="0.2"
-          class="clickable"
-        ></a-image>
-      </a-marker>
-
-      <a-entity camera></a-entity>
-    </a-scene>
-
-    <script>
-      window.addEventListener('load', () => {
-        const loader = document.getElementById('loader');
-        if (loader) loader.style.display = 'none';
-
-        const marker = document.querySelector('#animated-marker');
-        const videoEl = document.querySelector('#video-entity');
-        const flipSound = document.querySelector('#flip-sound');
-
-        // 頁面圖片載入
-        const pageUrls = [
-          'assets/cover.jpg',
-          'assets/page2.jpg',
-          'assets/page3.jpg'
-        ];
-        const imageCache = pageUrls.map(url => {
-          const img = new Image();
-          img.src = url;
-          return img;
-        });
-
-        let currentPage = 0;
-
-        function updateBookPage() {
-          const page = document.querySelector('#book-page');
-          if (page) {
-            page.setAttribute('material', 'src', imageCache[currentPage].src);
-            page.emit('flip');
-            if (flipSound) {
-              flipSound.currentTime = 0;
-              flipSound.play();
-            }
-          }
-        }
-
-        // 點擊翻頁按鈕
-        document.querySelector('#prev-button').addEventListener('click', () => {
-          currentPage = (currentPage - 1 + imageCache.length) % imageCache.length;
-          updateBookPage();
-        });
-
-        document.querySelector('#next-button').addEventListener('click', () => {
-          currentPage = (currentPage + 1) % imageCache.length;
-          updateBookPage();
-        });
-
-        // Marker 發現時播放影片
-        marker.addEventListener('markerFound', () => {
-          if (!videoEl.getAttribute('src')) {
-            videoEl.setAttribute('src', 'assets/ding.mp4');
-          }
-          const videoDom = videoEl.components.material.material.map.image;
-          if (videoDom) {
-            videoDom.play();
-            videoDom.muted = false;
-          }
-        });
-
-        // Marker 消失時暫停影片
-        marker.addEventListener('markerLost', () => {
-          const videoDom = videoEl.components.material.material.map.image;
-          if (videoDom) {
-            videoDom.pause();
-            videoDom.currentTime = 0;
-            videoDom.muted = true;
-          }
-        });
-      });
-    </script>
-  </body>
+            // 標記消失時暫停影片並靜音
+            document.querySelector('#animated-marker').addEventListener('markerLost', () => {
+                const aVideo = document.querySelector('a-video');
+                if (aVideo) {
+                    const videoElement = aVideo.components.material.material.map.image;
+                    videoElement.pause();
+                    videoElement.currentTime = 0; // 重置播放進度
+                    videoElement.muted = true; // 強制靜音
+                }
+            });
+        </script>
+    </body>
 </html>
