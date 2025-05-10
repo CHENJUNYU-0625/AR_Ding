@@ -65,24 +65,24 @@
           animation__flip="property: rotation; dur: 500; startEvents: flip; from: 0 0 0; to: 0 180 0"
         ></a-plane>
 
-        <!-- 翻頁按鈕 -->
-       <a-image
-  id="prev-button"
-  src="assets/left-arrow.png"
-  position="0.8 1.5 -1"   <!-- 原本是 -0.8，現在移到右邊 -->
-  width="0.2"
-  height="0.2"
-  class="clickable"
-></a-image>
+        <!-- 翻頁按鈕（已對調） -->
+        <a-image
+          id="prev-button"
+          src="assets/left-arrow.png"
+          position="0.8 1.5 -1"
+          width="0.2"
+          height="0.2"
+          class="clickable"
+        ></a-image>
 
-<a-image
-  id="next-button"
-  src="assets/right-arrow.png"
-  position="-0.8 1.5 -1"  <!-- 原本是 0.8，現在移到左邊 -->
-  width="0.2"
-  height="0.2"
-  class="clickable"
-></a-image>
+        <a-image
+          id="next-button"
+          src="assets/right-arrow.png"
+          position="-0.8 1.5 -1"
+          width="0.2"
+          height="0.2"
+          class="clickable"
+        ></a-image>
       </a-marker>
 
       <a-entity camera cursor="rayOrigin: mouse" raycaster="objects: .clickable"></a-entity>
